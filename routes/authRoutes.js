@@ -23,6 +23,9 @@ router.get('/login', authController.getLoginPage);
 // khi người dùng đăng nhập và submit form
 router.post('/login', authController.login);
 
+// hiển thị trang dashboard (GET)
+router.get('/dashboard', authController.getDashboard);
+
 // xuất khẩu router để dùng ở file khác
 module.exports = router;
 

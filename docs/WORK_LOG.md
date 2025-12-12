@@ -1,69 +1,75 @@
+Chúc mừng bạn! 🎉 Việc nhìn thấy tên mình trên Dashboard và F5 không bị "văng" ra ngoài chính là cột mốc đánh dấu bạn đã chinh phục được kỹ thuật quản lý phiên làm việc (Session Management).
+
+Dưới đây là nội dung cập nhật mới nhất cho file **`docs/WORK_LOG.md`**. Tôi đã đánh dấu hoàn thành cho các mục Session và Dashboard. Bạn hãy copy toàn bộ nội dung dưới đây và dán đè vào file cũ nhé.
+
+---
+
 # NHẬT KÝ PHÁT TRIỂN DỰ ÁN (WORK LOG)
 
 ## Tuần 1: Khởi tạo & Nền tảng (Foundation)
 
 ### 1. Thiết lập Môi trường & Cấu trúc
 - [x] **Cài đặt công cụ:** Node.js (LTS), MongoDB Community Server, MongoDB Compass, VS Code.
-- [x] **Khởi tạo dự án:**
-  - Chạy `npm init -y` tạo `package.json`.
-  - Cài đặt thư viện lõi: `express`, `mongoose`, `ejs`, `dotenv`, `bcrypt`.
-  - Cài đặt công cụ Dev: `nodemon` (để Hot Reload).
-- [x] **Cấu trúc thư mục MVC:** Tổ chức folder chuẩn: `models`, `views`, `controllers`, `routes`, `config`.
+- [x] **Khởi tạo dự án:** `npm init`, cài đặt `express`, `mongoose`, `ejs`, `dotenv`, `bcrypt`, `express-session`.
+- [x] **Cấu trúc MVC:** Tổ chức folder `models`, `views`, `controllers`, `routes`.
 
 ### 2. Kết nối Database
-- [x] **Cấu hình:** Tạo file `.env` chứa `MONGO_URI` và `PORT`. Thêm `.env` vào `.gitignore` để bảo mật.
-- [x] **Code kết nối:** Viết module `config/database.js` sử dụng `mongoose.connect` với `async/await`.
-- [x] **Mô hình hóa (Model):** Tạo `models/User.js` định nghĩa Schema User (username, email, password, role) với các validation (required, unique).
+- [x] **Cấu hình:** File `.env` và `config/database.js`.
+- [x] **Model:** Tạo Schema `User` (username, email, password, role).
 
-### 3. Xây dựng Giao diện (Frontend)
-- [x] **View Engine:** Cấu hình EJS trong `app.js`.
-- [x] **Tạo Views:** Tạo 3 file giao diện sử dụng Bootstrap 5:
-  - `home.ejs`: Trang chủ điều hướng.
-  - `register.ejs`: Form đăng ký (Method: POST, Action: /register).
-  - `login.ejs`: Form đăng nhập (Method: POST, Action: /login).
+### 3. Giao diện (Frontend)
+- [x] **Views:** Tạo `home.ejs`, `register.ejs`, `login.ejs` với Bootstrap 5.
 
 ---
 
-## Tuần 2: Xử lý Logic Đăng ký (Register Logic)
+## Tuần 2: Logic Đăng ký (Register Logic)
 
-### 1. Triển khai MVC (Model - View - Controller) cho tính năng Đăng ký
-- [x] **Controller (`authController.js`):**
-  - Viết hàm `register` xử lý bất đồng bộ.
-  - Nhận dữ liệu từ `req.body`.
-  - Kiểm tra trùng lặp Email (`User.findOne`).
-  - **Mã hóa mật khẩu:** Sử dụng `bcrypt.hash` trước khi lưu vào DB.
-  - Lưu user mới (`User.create`).
-- [x] **Router (`authRoutes.js`):**
-  - Tách biệt route `GET /register` (hiện form) và `POST /register` (xử lý).
-  - Sử dụng `express.Router()` và gắn vào `app.js`.
-- [x] **Middleware:**
-  - Kích hoạt `express.urlencoded` trong `app.js` để đọc dữ liệu từ Form HTML.
-
-### 2. Gỡ lỗi & Kiểm thử
-- [x] **Khắc phục lỗi:** Sửa lỗi Validation `role: 'User'` (do viết hoa) thành `'user'` (viết thường) để khớp với Schema.
-- [x] **Kết quả:** Đăng ký thành công -> Dữ liệu vào MongoDB (password đã mã hóa) -> Web chuyển hướng sang trang Login.
+- [x] **Controller:** Xử lý `register`: Hash password (`bcrypt`), tạo user mới trong DB.
+- [x] **Route:** Phân tách GET/POST cho trang đăng ký.
+- [x] **Middleware:** Cấu hình `body-parser` để đọc dữ liệu Form.
 
 ---
 
-## Tuần 3: Logic Đăng nhập (Login Logic)
-*Trạng thái: Đang thực hiện Giai đoạn 1*
+## Tuần 3: Đăng nhập & Quản lý Phiên (Login & Session)
+*Thời gian thực hiện: 08/12/2025 - 12/12/2025*
 
-### 1. Xây dựng Logic Đăng nhập (Backend)
-- [x] **Cập nhật Controller (`authController.js`):**
-  - Xây dựng hàm `login` xử lý phương thức POST.
-  - Sử dụng `User.findOne` để tìm tài khoản theo email.
-  - Sử dụng `bcrypt.compare` để so sánh mật khẩu nhập vào (plain text) với mật khẩu trong DB (hashed).
-  - Xử lý luồng lỗi: Dùng `res.send` báo lỗi nếu sai Email hoặc Password.
-  - Xử lý luồng đúng: `console.log` thông báo thành công và `res.redirect` về trang chủ.
+### 1. Logic Đăng nhập cơ bản (Backend)
+- [x] **Kiểm tra thông tin:**
+  - Tìm User theo email.
+  - So sánh mật khẩu bằng `bcrypt.compare`.
+- [x] **Luồng xử lý:**
+  - Sai thông tin -> Báo lỗi.
+  - Đúng thông tin -> (Trước đây) Chuyển về Home -> (Mới cập nhật) Chuyển về Dashboard.
 
-- [x] **Cập nhật Router (`authRoutes.js`):**
-  - Khai báo route `router.post('/login')` để đón dữ liệu từ Form Login.
+### 2. Cấu hình Session ("Bộ nhớ" Server)
+- [x] **Cài đặt:** Kiểm tra thư viện `express-session`.
+- [x] **Cấu hình `app.js`:**
+  - Thiết lập `app.use(session(...))` **trước** phần Routes.
+  - Cấu hình bảo mật: `httpOnly: true`.
+  - Cấu hình `maxAge`: 1 giờ.
+- [x] **Bảo mật:** Đưa `SESSION_SECRET` vào file `.env` để tránh lộ khóa bí mật.
 
-### 2. Kiểm thử (Manual Testing)
-- [x] **Test Case Sai:** Nhập sai thông tin -> Server chặn lại và báo lỗi.
-- [x] **Test Case Đúng:** Nhập đúng thông tin -> Server cho phép đi qua và chuyển hướng.
+### 3. Dashboard & Logic Bảo vệ (Protection)
+- [x] **Giao diện:** Tạo `views/dashboard.ejs` hiển thị thông tin User lấy từ Session.
+- [x] **Cập nhật Controller:**
+  - Hàm `login`: Lưu thông tin User (`id`, `username`, `role`) vào `req.session.user` khi đăng nhập thành công.
+  - Hàm `getDashboard`: Kiểm tra thủ công `if (req.session.user)` -> Cho vào, `else` -> Đá về Login.
+- [x] **Router:** Đăng ký route `GET /dashboard`.
 
-### 3. Việc tồn đọng (Pending Tasks)
-- [ ] **Session:** Cấu hình `express-session` để Server "nhớ" trạng thái đăng nhập.
-- [ ] **Dashboard:** Tạo trang quản trị dành riêng cho user đã đăng nhập.
-- [ ] **Middleware:** Viết hàm `isAuthenticated` để bảo vệ các route riêng tư.
+### 4. Kết quả kiểm thử (Testing)
+- [x] **Happy Case:** Đăng nhập đúng -> Vào Dashboard -> F5 (Refresh) vẫn giữ đăng nhập (Session hoạt động tốt).
+- [x] **Security Case:**
+  - Truy cập `/dashboard` khi chưa login -> Bị chuyển hướng về `/login`.
+  - Tab ẩn danh không vào được Dashboard.
+
+### 5. Việc tồn đọng & Kế hoạch tiếp theo (Next Steps)
+- [ ] **Middleware tách biệt:** Chuyển logic kiểm tra session từ Controller ra một file Middleware riêng (`isAuthenticated`) để tái sử dụng cho nhiều trang khác.
+- [ ] **Chức năng Đăng xuất (Logout):** Xóa session và chuyển hướng về trang Login.
+- [ ] **Phân quyền (Authorization):** Chỉ cho Admin vào trang quản lý User.
+
+---
+
+**Ghi chú kỹ thuật ngày 12/12:**
+* Đã hiểu rõ luồng dữ liệu của Middleware: `app.use` -> `req.body`, `req.session`.
+* Đã nắm được cơ chế `httpOnly` để chống XSS (JavaScript không đọc được cookie) và `secret` để chống sửa đổi Cookie.
+* Dự án đang chạy theo mô hình **Server-Side Rendering (SSR)** (Node.js render EJS).

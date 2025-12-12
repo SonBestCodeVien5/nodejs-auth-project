@@ -68,12 +68,20 @@ exports.login = async(req, res) => {
             return res.send("Lỗi: Mật khẩu không đúng!");
         }
 
+        // cấp quyền đăng nhập, tạo session, cookie
+        req.session.user = {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            role: user.role
+        };
+
         // Nếu khớp hết -> Đăng nhập thành công
         console.log("✅ Đăng nhập thành công:", user.username);
 
         // tạm thời chưa làm session, cookie gì cả
         // đăng nhập thành công thì chuyển hướng về trang chủ
-        res.redirect('/');
+        res.redirect('/dashboard');
     } catch (error) {
         console.error(error);
         res.send("Lỗi hệ thống: " + error.message);
@@ -89,3 +97,15 @@ exports.getRegisterPage = (req, res) => {
 exports.getLoginPage = (req, res) => {
     res.render('login'); // hiển thị trang login.ejs
 };
+
+// hàm hiển thị trang dashboard (dành cho user đã đăng nhập)
+exports.getDashboard = (req, res) => {
+    // kiểm tra kho session xem có user không
+    if(req.session.user){
+        // có thẻ: cho phép hiển thị dashboard
+        res.render('dashboard', {user: req.session.user});
+    } else {
+        // không thẻ: chuyển hướng về trang đăng nhập
+        res.redirect('/login');
+    }
+}

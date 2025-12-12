@@ -1,97 +1,119 @@
 # SỔ TAY KỸ THUẬT DỰ ÁN (TECHNICAL NOTES)
-*Cập nhật lần cuối: Tuần 3 - Login Logic & System Architecture*
+
+*Cập nhật lần cuối: Tuần 3 - Session Management & System Architecture*
 
 Tài liệu này tổng hợp các kiến thức cốt lõi, giải thích bản chất "Tại sao làm thế" cho dự án Node.js/MongoDB Authentication.
 
----
+-----
 
-## 1. KIẾN TRÚC HỆ THỐNG (SYSTEM ARCHITECTURE)
+## 1\. KIẾN TRÚC HỆ THỐNG (SYSTEM ARCHITECTURE)
 
-### 1.1. Single-Threaded vs Multi-Threaded
-* **Node.js (Đơn luồng):**
-    * Chỉ có 1 nhân viên duy nhất (Main Thread) xử lý mọi yêu cầu.
-    * **Cơ chế:** Nhận yêu cầu -> Nếu cần chờ (DB/File) thì ném ra sau (Async) -> Quay lại nhận yêu cầu khác ngay.
-    * **Ưu điểm:** Cực nhẹ (tốn ít RAM), chịu tải cao (xử lý hàng chục nghìn kết nối I/O cùng lúc). Phù hợp Web/API.
-    * **Nhược điểm:** Dở tính toán nặng (CPU Bound). Nếu tính toán lâu, toàn bộ server bị treo.
-* **Truyền thống (Đa luồng - Java/PHP cũ):**
-    * Mỗi yêu cầu tạo ra 1 nhân viên riêng (Thread).
-    * **Nhược điểm:** Tốn tài nguyên (RAM) để nuôi Thread. Dễ sập nếu quá tải (C10k problem).
+### 1.1. Node.js: Đơn luồng & Bất đồng bộ (Single-Threaded & Async)
 
-### 1.2. Tại sao phải dùng `async/await`?
-* Do Node.js chỉ có 1 luồng, nếu code chạy đồng bộ (Synchronous) khi gọi Database, luồng chính sẽ bị chặn (Block).
-* **`await`**: Ra lệnh cho code hiện tại "dừng lại chờ kết quả", NHƯNG server Node.js thì **không dừng**. Nó rảnh tay để đi xử lý request của người dùng khác.
-* -> Giúp hệ thống Non-blocking I/O.
+  * **Bản chất:** Node.js chỉ dùng **1 luồng duy nhất (Main Thread)** để xử lý mọi request.
+  * **Ví dụ:** Giống như quán cafe chỉ có 1 nhân viên phục vụ.
+  * **Cơ chế Non-blocking I/O:**
+      * Khi gặp tác vụ nặng (kết nối DB, đọc file), Node.js sẽ "dán giấy nhớ" (`await`) và ném tác vụ đó ra sau nền.
+      * Nhân viên quay lại phục vụ khách hàng khác ngay lập tức -\> Giúp chịu tải hàng chục nghìn kết nối cùng lúc.
+  * **Tại sao cần `await`?** Để ép code chạy tuần tự ở những chỗ cần thiết (VD: Phải chờ tìm thấy User trong DB xong mới được kiểm tra password).
 
-### 1.3. Node.js trên Server đa nhân (Clustering)
-* Node.js đơn luồng không lãng phí sức mạnh của Server 64 nhân.
-* **Giải pháp:** Sử dụng kỹ thuật **Clustering** (hoặc PM2). Chạy 64 bản sao (Instances) của Node.js song song trên 64 nhân.
+### 1.2. Frontend vs Backend (Ranh giới môi trường)
 
----
+  * **Backend (Node.js):**
+      * Chạy trên Server. Có toàn quyền (đọc/ghi file, kết nối DB).
+      * Dùng: `require`, `module.exports`, `process.env`.
+      * **Không có:** `window`, `document`, `alert` (vì Server không có màn hình).
+  * **Frontend (Browser):**
+      * Chạy trên trình duyệt người dùng (Chrome/Edge).
+      * Dùng: `document.getElementById`, `window`, `fetch`.
+      * **Cấm:** `require`, kết nối trực tiếp DB (lỗi bảo mật).
 
-## 2. MÔI TRƯỜNG & CẤU HÌNH (ENVIRONMENT)
+### 1.3. Server-Side Rendering (SSR) - Mô hình hiện tại
 
-### 2.1. Live Server vs Node.js Server
-* **Vấn đề:** Không thể dùng Extension "Live Server" cho file `.ejs`.
-* **Lý do:** EJS là Web Động (Server-Side Rendering), cần Node.js biên dịch logic trước khi trả về trình duyệt. Live Server chỉ chạy HTML tĩnh.
+  * **Cơ chế:** Server (Node.js) tính toán, điền dữ liệu vào file `.ejs`, sau đó vẽ ra mã **HTML thuần** rồi mới gửi về cho trình duyệt.
+  * **Vai trò:**
+      * **Node.js:** Là "Họa sĩ" vẽ tranh.
+      * **Browser:** Chỉ là cái "Tivi" hiển thị bức tranh đó.
+  * **Khác biệt với React/Next.js:** React là Client-Side Rendering (Trình duyệt tự tải code JS về để vẽ giao diện).
 
-### 2.2. Các lệnh khởi chạy (Scripts)
-* **`npm start`**: Lệnh Production (`node app.js`).
-* **`npm run dev`**: Lệnh Development (`nodemon app.js` - Tự động restart).
+-----
 
----
+## 2\. QUẢN LÝ PHIÊN & BẢO MẬT (SESSION & SECURITY)
 
-## 3. CẤU TRÚC MÃ NGUỒN (CODE STRUCTURE)
+### 2.1. Vấn đề "Cá vàng" của HTTP
 
-### 3.1. Mô hình MVC
-* **Model:** Quản lý dữ liệu (Schema `User.js`).
-* **View:** Giao diện (`register.ejs`, `login.ejs`).
-* **Controller:** Xử lý logic (`authController.js`).
-* **Routes:** Điều phối đường dẫn (`authRoutes.js`).
+  * HTTP là giao thức không trạng thái (Stateless). Server không tự nhớ user giữa 2 lần F5.
+  * **Giải pháp:** Dùng **Session** (Bộ nhớ tạm trên Server) và **Cookie** (Thẻ bài đánh dấu phía Client).
 
-### 3.2. Import & Export
-* **`module.exports = Router`**: Xuất nguyên kiện (Object duy nhất).
-* **`exports.funcName = ...`**: Xuất lẻ từng hàm vào một Object chung.
-* **Private Scope:** Các biến không export trong file thì file khác không thể truy cập (Tính đóng gói).
+### 2.2. Cấu hình `express-session`
 
----
+```javascript
+app.use(session({
+    secret: process.env.SESSION_SECRET, // Chữ ký bảo mật
+    resave: false,           // Không ghi đè nếu không đổi
+    saveUninitialized: true, // Lưu session ngay khi khách vừa vào
+    cookie: { 
+        maxAge: 3600000,     // Thời gian sống (ms)
+        httpOnly: true       // CHỐNG TRỘM (JS không đọc được)
+    }
+}));
+```
 
-## 4. LOGIC BACKEND (DEEP DIVE)
+### 2.3. Các lớp bảo mật Session
 
-### 4.1. Middleware & Body Parser
-* `app.use(express.urlencoded)`: Bắt buộc để đọc dữ liệu từ Form HTML (`req.body`). Nếu thiếu, dữ liệu nhận được là `undefined`.
-* `app.use` vs `app.get`:
-    * `app.get('/')`: Chỉ khớp trang chủ (Exact match).
-    * `app.use('/')`: Khớp mọi đường dẫn bắt đầu bằng `/` (Prefix match) -> Dùng để gắn Router hoặc Middleware.
+1.  **Chống sửa đổi (Anti-Tampering):** Dùng `secret` để ký vào Cookie. Nếu User tự sửa cookie, chữ ký sai -\> Server hủy thẻ.
+2.  **Chống ăn trộm (Anti-Theft/XSS):**
+      * `httpOnly: true`: Ngăn chặn mã JavaScript độc hại (do Hacker cài cắm) đọc trộm `document.cookie`.
+3.  **Chống nghe lén (Sniffing):**
+      * `secure: true`: Chỉ gửi cookie qua HTTPS (Chỉ bật khi lên Production, tắt khi chạy Localhost).
 
-### 4.2. Destructuring & Aliasing
-* Khi lấy dữ liệu từ `req.body`, tên biến phải trùng với `name` bên HTML.
-* Nếu muốn đổi tên, dùng cú pháp Alias:
-  `const { email: taiKhoan } = req.body;`
+-----
 
-### 4.3. HTTP Methods (GET vs POST)
-* Server phân biệt dựa trên cặp **[METHOD] + [URL]**.
-* **GET:** Hiển thị giao diện.
-* **POST:** Xử lý dữ liệu ngầm (Login/Register).
-* **Lưu ý:** Form HTML bắt buộc phải có `method="POST"`, nếu không sẽ mặc định là GET và lộ dữ liệu lên URL.
+## 3\. MIDDLEWARE & LUỒNG DỮ LIỆU (THE FLOW)
 
----
+### 3.1. Bản chất Middleware
 
-## 5. QUY TRÌNH XỬ LÝ (AUTH FLOW)
+  * Là dây chuyền sản xuất. `req` (gói hàng) đi qua từng trạm kiểm soát (`app.use`) trước khi đến đích (Controller).
 
-### 5.1. Đăng ký (Register)
-1.  Nhận `req.body`.
-2.  Kiểm tra trùng Email.
-3.  **Hashing:** Dùng `bcrypt.hash` mã hóa mật khẩu (Tuyệt đối không lưu pass thô).
-4.  Lưu vào MongoDB (`User.create`).
+### 3.2. Nguồn gốc các biến trong `req`
 
-### 5.2. Đăng nhập (Login)
-1.  Tìm User theo Email (`User.findOne`).
-2.  **Compare:** Dùng `bcrypt.compare(pass_nhap, pass_db)` để so sánh.
-3.  **Phản hồi:**
-    * Nếu sai: Dùng `res.send` báo lỗi.
-    * Nếu đúng: Dùng `res.redirect` chuyển hướng sang Dashboard (Trải nghiệm người dùng tốt hơn).
+  * **`req.body`:** Được sinh ra bởi middleware `express.urlencoded`. Nó "bóc" dữ liệu form và nhét vào `req`.
+  * **`req.session`:** Được sinh ra bởi middleware `session`. Nó "tra cứu" kho lưu trữ và nhét thông tin user vào `req`.
+  * **`user` (trong Controller):** Được lấy từ Database thông qua Mongoose (`User.findOne`).
 
-### 5.3. Session (Phiên làm việc - Đang triển khai)
-* HTTP là giao thức không trạng thái (Stateless).
-* Cần `express-session` để Server lưu thông tin người dùng sau khi đăng nhập thành công.
-* Session ID được lưu trong Cookie trình duyệt.
+### 3.3. Thứ tự quan trọng
+
+1.  `express.urlencoded` (Phải chạy trước để lấy data).
+2.  `session` (Phải chạy trước Routes để kịp cấp thẻ).
+3.  `routes` (Chạy sau cùng).
+
+-----
+
+## 4\. QUY TRÌNH LOGIN HOÀN CHỈNH (BEST PRACTICE)
+
+1.  **Nhận Request:** `POST /login` với `email`, `password`.
+2.  **Tìm kiếm:** `User.findOne({ email })`.
+3.  **So khớp:** `bcrypt.compare(password, user.password)`.
+      * *Tại sao không so sánh `===`?* Vì mật khẩu trong DB đã bị băm (Hash), không thể dịch ngược lại, chỉ có thể băm cái mới rồi so sánh 2 bản băm.
+4.  **Cấp thẻ (Session):**
+      * Lưu `req.session.user = { id, username, role }`.
+      * **Lưu ý:** Tuyệt đối không lưu `password` vào Session.
+5.  **Điều hướng:** `res.redirect('/dashboard')`.
+
+-----
+
+## 5\. GIT & GITHUB (VERSION CONTROL)
+
+### 5.1. Quy tắc `.gitignore`
+
+  * File `.gitignore` là tấm khiên chặn các file rác hoặc nhạy cảm.
+  * **Bắt buộc chặn:**
+      * `node_modules/`: Quá nặng, không cần thiết (người khác tự `npm install`).
+      * `.env`: Chứa mật khẩu DB và Secret Key (Lộ là mất dữ liệu).
+
+### 5.2. Các lệnh cơ bản
+
+  * `git init`: Khởi tạo kho.
+  * `git add .`: Gom file.
+  * `git commit -m "messsage"`: Lưu trạng thái.
+  * `git push`: Đẩy lên GitHub.
