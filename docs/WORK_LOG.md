@@ -1,9 +1,3 @@
-Chúc mừng bạn! 🎉 Việc nhìn thấy tên mình trên Dashboard và F5 không bị "văng" ra ngoài chính là cột mốc đánh dấu bạn đã chinh phục được kỹ thuật quản lý phiên làm việc (Session Management).
-
-Dưới đây là nội dung cập nhật mới nhất cho file **`docs/WORK_LOG.md`**. Tôi đã đánh dấu hoàn thành cho các mục Session và Dashboard. Bạn hãy copy toàn bộ nội dung dưới đây và dán đè vào file cũ nhé.
-
----
-
 # NHẬT KÝ PHÁT TRIỂN DỰ ÁN (WORK LOG)
 
 ## Tuần 1: Khởi tạo & Nền tảng (Foundation)
@@ -22,54 +16,52 @@ Dưới đây là nội dung cập nhật mới nhất cho file **`docs/WORK_LOG
 
 ---
 
-## Tuần 2: Logic Đăng ký (Register Logic)
+## Tuần 2: Xây dựng Logic & Tương tác Database (Register Core)
+*Mục tiêu: Xử lý dữ liệu từ Client gửi lên và lưu an toàn vào Database.*
 
-- [x] **Controller:** Xử lý `register`: Hash password (`bcrypt`), tạo user mới trong DB.
-- [x] **Route:** Phân tách GET/POST cho trang đăng ký.
-- [x] **Middleware:** Cấu hình `body-parser` để đọc dữ liệu Form.
+### 1. Xử lý Dữ liệu đầu vào (Input Handling)
+- [x] **Middleware:** Cấu hình `express.urlencoded` để Server đọc được dữ liệu từ Form HTML (`req.body`).
+- [x] **Routing:** Phân tách rõ ràng phương thức `GET` (Hiển thị Form) và `POST` (Xử lý dữ liệu) cho route `/register`.
+
+### 2. Logic Đăng ký (Business Logic)
+- [x] **Kiểm tra dữ liệu:** Sử dụng `User.findOne` để check trùng lặp Email (Validation).
+- [x] **Bảo mật mật khẩu:**
+  - Tìm hiểu về Hashing (Băm mật khẩu).
+  - Sử dụng thư viện `bcrypt` để mã hóa password trước khi lưu (Không lưu plain text).
+- [x] **Tương tác Database:**
+  - Sử dụng `User.create` để lưu user mới vào MongoDB.
+  - Áp dụng `try/catch` để bắt lỗi trong quá trình xử lý bất đồng bộ (`async/await`).
+
+### 3. Kết quả (Outcome)
+- [x] Đăng ký thành công -> Dữ liệu User xuất hiện trong MongoDB Compass (với mật khẩu đã mã hóa).
 
 ---
 
-## Tuần 3: Đăng nhập & Quản lý Phiên (Login & Session)
-*Thời gian thực hiện: 08/12/2025 - 12/12/2025*
+## Tuần 3: Hoàn thiện Authentication (Login, Session, Logout)
 
-### 1. Logic Đăng nhập cơ bản (Backend)
-- [x] **Kiểm tra thông tin:**
-  - Tìm User theo email.
-  - So sánh mật khẩu bằng `bcrypt.compare`.
-- [x] **Luồng xử lý:**
-  - Sai thông tin -> Báo lỗi.
-  - Đúng thông tin -> (Trước đây) Chuyển về Home -> (Mới cập nhật) Chuyển về Dashboard.
+### 1. Logic Đăng nhập & Session (Core)
+- [x] **Xử lý đăng nhập:** So khớp mật khẩu (`bcrypt.compare`).
+- [x] **Cấu hình Session:** Cài đặt `express-session` trong `app.js`.
+  - Thiết lập `secret` trong `.env`.
+  - Cấu hình `cookie` (maxAge: 1 giờ, httpOnly).
+- [x] **Lưu trạng thái:** Ghi thông tin user (`id`, `username`, `role`) vào `req.session` khi login thành công.
 
-### 2. Cấu hình Session ("Bộ nhớ" Server)
-- [x] **Cài đặt:** Kiểm tra thư viện `express-session`.
-- [x] **Cấu hình `app.js`:**
-  - Thiết lập `app.use(session(...))` **trước** phần Routes.
-  - Cấu hình bảo mật: `httpOnly: true`.
-  - Cấu hình `maxAge`: 1 giờ.
-- [x] **Bảo mật:** Đưa `SESSION_SECRET` vào file `.env` để tránh lộ khóa bí mật.
+### 2. Giao diện & Bảo mật (Dashboard)
+- [x] **View:** Tạo trang `dashboard.ejs` hiển thị thông tin lấy từ Session.
+- [x] **Middleware cơ bản:** Kiểm tra `if (req.session.user)` trong Controller để chặn truy cập trái phép.
 
-### 3. Dashboard & Logic Bảo vệ (Protection)
-- [x] **Giao diện:** Tạo `views/dashboard.ejs` hiển thị thông tin User lấy từ Session.
-- [x] **Cập nhật Controller:**
-  - Hàm `login`: Lưu thông tin User (`id`, `username`, `role`) vào `req.session.user` khi đăng nhập thành công.
-  - Hàm `getDashboard`: Kiểm tra thủ công `if (req.session.user)` -> Cho vào, `else` -> Đá về Login.
-- [x] **Router:** Đăng ký route `GET /dashboard`.
+### 3. Tối ưu hóa & Refactoring (Clean Code)
+- [x] **Chức năng Đăng xuất:**
+  - Tạo route `/logout`.
+  - Sử dụng `req.session.destroy()` để hủy phiên làm việc.
+- [x] **Tách Middleware:**
+  - Chuyển logic kiểm tra session ra file riêng `middleware/authMiddleware.js`.
+  - Sử dụng `next()` để điều hướng luồng dữ liệu.
+  - Áp dụng middleware `isAuthenticated` vào route `/dashboard`.
 
 ### 4. Kết quả kiểm thử (Testing)
-- [x] **Happy Case:** Đăng nhập đúng -> Vào Dashboard -> F5 (Refresh) vẫn giữ đăng nhập (Session hoạt động tốt).
-- [x] **Security Case:**
-  - Truy cập `/dashboard` khi chưa login -> Bị chuyển hướng về `/login`.
-  - Tab ẩn danh không vào được Dashboard.
-
-### 5. Việc tồn đọng & Kế hoạch tiếp theo (Next Steps)
-- [ ] **Middleware tách biệt:** Chuyển logic kiểm tra session từ Controller ra một file Middleware riêng (`isAuthenticated`) để tái sử dụng cho nhiều trang khác.
-- [ ] **Chức năng Đăng xuất (Logout):** Xóa session và chuyển hướng về trang Login.
-- [ ] **Phân quyền (Authorization):** Chỉ cho Admin vào trang quản lý User.
-
----
-
-**Ghi chú kỹ thuật ngày 12/12:**
-* Đã hiểu rõ luồng dữ liệu của Middleware: `app.use` -> `req.body`, `req.session`.
-* Đã nắm được cơ chế `httpOnly` để chống XSS (JavaScript không đọc được cookie) và `secret` để chống sửa đổi Cookie.
-* Dự án đang chạy theo mô hình **Server-Side Rendering (SSR)** (Node.js render EJS).
+- [x] **Flow chuẩn:** Login -> Dashboard -> Logout -> Login.
+- [x] **Bảo mật:**
+  - Không thể vào Dashboard nếu chưa Login (bị đá về Login).
+  - Không thể vào lại Dashboard sau khi đã Logout (bấm nút Back cũng không được).
+  - Tab ẩn danh không truy cập được.

@@ -117,3 +117,39 @@ app.use(session({
   * `git add .`: Gom file.
   * `git commit -m "messsage"`: Lưu trạng thái.
   * `git push`: Đẩy lên GitHub.
+
+  -----
+
+---
+## 6\.. MIDDLEWARE & FLOW XỬ LÝ (NÂNG CAO)
+
+### 6.1. Cơ chế hoạt động của Middleware
+* **Khái niệm:** Là những trạm kiểm soát nằm giữa Request và Response.
+* **Luồng chạy:** `Request` -> `Middleware 1` -> `Middleware 2` -> ... -> `Controller`.
+* **Lệnh `next()`:**
+  - Là "chìa khóa" để mở cửa sang trạm tiếp theo.
+  - Nếu Middleware không gọi `next()` (hoặc không `res.send/redirect`), request sẽ bị treo mãi mãi.
+
+### 6.2. Cú pháp Destructuring khi Import
+* Code: `const { isAuthenticated } = require(...)`
+* **Ý nghĩa:** Chỉ lấy đúng hàm `isAuthenticated` từ trong file export ra, không lấy cả object. Giúp code gọn hơn.
+
+### 6.3. Tại sao Logout dùng GET?
+* Route `/logout` bản chất là hành động điều hướng (Navigation), không gửi dữ liệu lên server, nên dùng `GET` cho tiện (gắn vào thẻ `<a>` được).
+* **Lưu ý:** Với các hệ thống lớn, nên dùng `POST` để tránh lỗi CSRF (bị lừa bấm link đăng xuất).
+
+---
+
+## 7\. CHI TIẾT VỀ SESSION (DATA FLOW)
+
+### 7.1. Flow 2 chiều (Browser <-> Server)
+* **Chiều đi (Server -> Browser):**
+  - Khi gán `req.session.user = ...`, thư viện tự động gửi header `Set-Cookie: connect.sid=...` về trình duyệt.
+* **Chiều về (Browser -> Server):**
+  - Trình duyệt tự động gửi header `Cookie: connect.sid=...` lên Server.
+  - Middleware `session` dùng mã ID đó để lục lọi trong RAM và trả lại dữ liệu user vào biến `req.session`.
+
+### 7.2. Các hàm quan trọng
+* `req.session.user = {...}`: **Cấp thẻ** (Ghi vào RAM).
+* `req.session.destroy()`: **Xé thẻ** (Xóa khỏi RAM).
+* `res.redirect()`: **Đuổi về** (Điều hướng sang trang khác).

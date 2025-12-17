@@ -70,7 +70,7 @@ exports.login = async(req, res) => {
 
         // cấp quyền đăng nhập, tạo session, cookie
         req.session.user = {
-            id: user._id,
+            id: user._id, // tạo session lưu id, username, email, role
             username: user.username,
             email: user.email,
             role: user.role
@@ -88,6 +88,21 @@ exports.login = async(req, res) => {
     }
 };
 
+// hàm đăng xuất 
+exports.logout = (req, res) => {
+    // gọi lệnh hủy session (xé thẻ)
+    req.session.destroy((err) => {
+        if(err){
+            console.log("Lỗi khi đăng xuất: ", err);
+            return res.send("Lỗi khi đăng xuất!");
+        } 
+        // sau khi đăng xuất thành công
+        console.log("✅ Đăng xuất thành công");
+        // chuyển hướng về trang đăng nhập
+        res.redirect('/login'); 
+    });
+};
+
 // hàm hiển thị trang đăng kí
 exports.getRegisterPage = (req, res) => {
     res.render('register'); // hiển thị trang register.ejs
@@ -100,12 +115,12 @@ exports.getLoginPage = (req, res) => {
 
 // hàm hiển thị trang dashboard (dành cho user đã đăng nhập)
 exports.getDashboard = (req, res) => {
-    // kiểm tra kho session xem có user không
-    if(req.session.user){
-        // có thẻ: cho phép hiển thị dashboard
-        res.render('dashboard', {user: req.session.user});
-    } else {
-        // không thẻ: chuyển hướng về trang đăng nhập
-        res.redirect('/login');
-    }
+    // // kiểm tra kho session xem có user không
+    // if(req.session.user){
+    //     // có thẻ: cho phép hiển thị dashboard
+        res.render('dashboard', {user: req.session.user}); // do đã có middleware kiểm tra xác thực
+    // } else {
+    //     // không thẻ: chuyển hướng về trang đăng nhập
+    //     res.redirect('/login');
+    // }
 }
