@@ -79,9 +79,12 @@ exports.login = async(req, res) => {
         // Nếu khớp hết -> Đăng nhập thành công
         console.log("✅ Đăng nhập thành công:", user.username);
 
-        // tạm thời chưa làm session, cookie gì cả
-        // đăng nhập thành công thì chuyển hướng về trang chủ
-        res.redirect('/dashboard');
+        // đăng nhập thành công thì chuyển hướng đến trang tùy theo vai trò
+        if(user.role === 'admin'){
+            res.redirect('/admin');
+        } else {
+            res.redirect('/dashboard');
+        }
     } catch (error) {
         console.error(error);
         res.send("Lỗi hệ thống: " + error.message);
@@ -123,4 +126,23 @@ exports.getDashboard = (req, res) => {
     //     // không thẻ: chuyển hướng về trang đăng nhập
     //     res.redirect('/login');
     // }
-}
+};
+
+// hàm hiển thị trang admin (role admin only)
+exports.getAdminPage = async (req, res) => {
+    try{
+        // lấy tất cả user từ database
+        // User.find() không truyền tham số => lấy tất
+        const allUser = await User.find();
+
+        // render trang admin và gửi danh sách user 
+        res.render('admin', {
+            user: req.session.user,
+            users: allUser
+        });
+    } catch(error){
+        console.error(error);
+        res.send('Lỗi lấy danh sách User: ' + error.message);
+    };
+    
+};

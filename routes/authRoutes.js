@@ -6,7 +6,7 @@ const router = exspress.Router(); // tạo router riêng cho các route liên qu
 // gọi controller để xử lí các yêu cầu
 const authController = require('../controllers/authController');
 // gọi middleware để kiểm tra xác thực
-const { isAuthenticated } = require('../middleware/authMiddleware');
+const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware');
 
 // -- Định nghĩa các route liên quan cần đi
 // A. hiển thị trang đăng kí (GET)
@@ -30,6 +30,9 @@ router.get('/dashboard', isAuthenticated ,authController.getDashboard);
 
 // E. xử lí đăng xuất (GET)
 router.get('/logout', authController.logout);
+
+// F. hiển thị trang admin 
+router.get('/admin', isAuthenticated, isAdmin,authController.getAdminPage);
 
 // xuất khẩu router để dùng ở file khác
 module.exports = router;

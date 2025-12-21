@@ -12,3 +12,20 @@ exports.isAuthenticated = (req, res, next) => {
         return res.redirect('/login');
     }
 };
+
+// hàm kiểm tra vai trò 
+exports.isAdmin = (req, res, next) => {
+    // kiểm tra user đã đăng nhập chưa 
+    if (req.session && req.session.user){
+        // kiểm tra role 
+        if(req.session.user.role === 'admin'){
+            return next();
+        } 
+        else {
+            return res.send('⛔ Bạn không có quyền truy cập trang này!');
+        }
+    }
+    else {
+        res.redirect('/login');
+    }
+};

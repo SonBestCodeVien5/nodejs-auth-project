@@ -65,3 +65,25 @@
   - Không thể vào Dashboard nếu chưa Login (bị đá về Login).
   - Không thể vào lại Dashboard sau khi đã Logout (bấm nút Back cũng không được).
   - Tab ẩn danh không truy cập được.
+
+  ---
+  ## Tuần 4: Phân quyền & Quản trị (Authorization & Admin Panel)
+
+### 1. Cấu trúc Dữ liệu & Middleware (Backend)
+- [x] **Database:** Cập nhật Schema User, thêm trường `role` (enum: 'user', 'admin').
+- [x] **Middleware nâng cao:**
+  - Viết hàm `isAdmin` trong `authMiddleware.js`.
+  - Logic: Kiểm tra `req.session.user.role === 'admin'`. Chặn đứng nếu không phải Admin.
+- [x] **Controller:** Cập nhật logic `login` để điều hướng thông minh:
+  - Admin -> Chuyển hướng sang `/admin`.
+  - User -> Chuyển hướng sang `/dashboard`.
+
+### 2. Giao diện Quản trị (Admin Interface)
+- [x] **Controller:** Viết hàm `getAdminPage` sử dụng `User.find()` để lấy danh sách toàn bộ người dùng.
+- [x] **View:** Tạo `admin.ejs` hiển thị bảng dữ liệu (HTML Table), bao gồm thông tin: Email, Username, Role, Ngày tạo.
+- [x] **Route:** Bảo vệ route `/admin` bằng 2 lớp khóa: `isAuthenticated` (Đăng nhập chưa?) và `isAdmin` (Có phải Sếp không?).
+
+### 3. Kết quả kiểm thử (Testing)
+- [x] **Phân quyền:** User thường cố tình truy cập link `/admin` bị chặn lại.
+- [x] **Luồng đi:** Admin đăng nhập được chuyển thẳng vào trang quản trị.
+- [x] **Hiển thị:** Danh sách user hiển thị đầy đủ, chính xác từ Database.

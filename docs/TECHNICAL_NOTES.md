@@ -1,6 +1,6 @@
 # SỔ TAY KỸ THUẬT DỰ ÁN (TECHNICAL NOTES)
 
-*Cập nhật lần cuối: Tuần 3 - Session Management & System Architecture*
+*Cập nhật lần cuối: Tuần 4
 
 Tài liệu này tổng hợp các kiến thức cốt lõi, giải thích bản chất "Tại sao làm thế" cho dự án Node.js/MongoDB Authentication.
 
@@ -153,3 +153,30 @@ app.use(session({
 * `req.session.user = {...}`: **Cấp thẻ** (Ghi vào RAM).
 * `req.session.destroy()`: **Xé thẻ** (Xóa khỏi RAM).
 * `res.redirect()`: **Đuổi về** (Điều hướng sang trang khác).
+
+---
+## 8\. PHÂN QUYỀN (AUTHORIZATION - RBAC)
+
+### 8.1. Khái niệm Role-Based Access Control (RBAC)
+* Hệ thống phân quyền dựa trên vai trò.
+* **Database:** Thêm trường `role` vào bản ghi User.
+* **Session:** Khi đăng nhập, Server lưu `role` vào Session để "đóng dấu" lên thẻ bài của người dùng.
+
+### 8.2. Chiến lược bảo vệ nhiều lớp (Defense in Depth)
+* Muốn vào phòng Admin, Request phải đi qua 2 cổng kiểm soát:
+  1.  `isAuthenticated`: Kiểm tra xem đã có Session chưa (đã đăng nhập chưa).
+  2.  `isAdmin`: Mở Session ra, kiểm tra trường `role` có phải là 'admin' không.
+* Code: `router.get('/admin', isAuthenticated, isAdmin, controller)`
+
+---
+
+## 9\. CƠ CHẾ ĐIỀU HƯỚNG (REDIRECT FLOW)
+
+### 9.1. Bản chất của `res.redirect`
+* Server không tự chuyển hàm nội bộ. `res.redirect('/admin')` thực chất là Server gửi tín hiệu về Browser: *"Hãy đi sang địa chỉ /admin đi!"*.
+* Mã HTTP Status: **302 Found**.
+
+### 9.2. Luồng đi "Bóng bàn" (Ping-Pong)
+1.  **Request 1 (POST /login):** Browser gửi user/pass. Server kiểm tra OK -> Trả về lệnh Redirect.
+2.  **Request 2 (GET /admin):** Browser nhận lệnh -> Tự động gửi Request mới đến `/admin`.
+3.  **Hệ quả:** Vì là Request mới, nên nó bắt buộc phải chạy qua toàn bộ Middleware (`isAuthenticated`, `isAdmin`) từ đầu. Điều này đảm bảo an ninh tuyệt đối, không có chuyện "đi cửa sau" từ hàm Login sang hàm Admin.
