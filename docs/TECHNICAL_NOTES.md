@@ -180,3 +180,14 @@ app.use(session({
 1.  **Request 1 (POST /login):** Browser gửi user/pass. Server kiểm tra OK -> Trả về lệnh Redirect.
 2.  **Request 2 (GET /admin):** Browser nhận lệnh -> Tự động gửi Request mới đến `/admin`.
 3.  **Hệ quả:** Vì là Request mới, nên nó bắt buộc phải chạy qua toàn bộ Middleware (`isAuthenticated`, `isAdmin`) từ đầu. Điều này đảm bảo an ninh tuyệt đối, không có chuyện "đi cửa sau" từ hàm Login sang hàm Admin.
+
+## 10. CÔNG CỤ KIỂM THỬ API (POSTMAN)
+
+### 10.1. Vai trò trong dự án
+* Do API trả về dữ liệu dạng JSON (không phải giao diện HTML), việc kiểm thử trên trình duyệt gặp nhiều hạn chế (khó gửi POST request với JSON body, không thể tùy chỉnh Header).
+* Postman đóng vai trò là một **Client giả lập**, cho phép gửi các request phức tạp để kiểm tra logic của Backend trước khi tích hợp vào Frontend (Mobile/Web App).
+
+### 10.2. Quy trình kiểm thử JWT với Postman
+1.  **Login:** Gửi Request `POST /api/login` với body JSON (email, pass) -> Nhận về chuỗi `token`.
+2.  **Xác thực:** Copy chuỗi `token` nhận được.
+3.  **Gọi API bảo mật:** Mở tab mới, chọn tab **Headers**, thêm key `Authorization` với giá trị `Bearer <token_vua_copy>` -> Gửi Request để kiểm tra quyền truy cập.
