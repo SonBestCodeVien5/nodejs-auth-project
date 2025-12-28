@@ -67,7 +67,7 @@
   - Tab ẩn danh không truy cập được.
 
   ---
-  ## Tuần 4: Phân quyền & Quản trị (Authorization & Admin Panel)
+## Tuần 4: Phân quyền & Quản trị (Authorization & Admin Panel)
 
 ### 1. Cấu trúc Dữ liệu & Middleware (Backend)
 - [x] **Database:** Cập nhật Schema User, thêm trường `role` (enum: 'user', 'admin').
@@ -87,3 +87,16 @@
 - [x] **Phân quyền:** User thường cố tình truy cập link `/admin` bị chặn lại.
 - [x] **Luồng đi:** Admin đăng nhập được chuyển thẳng vào trang quản trị.
 - [x] **Hiển thị:** Danh sách user hiển thị đầy đủ, chính xác từ Database.
+
+## 28/12/2025: Triển khai Phase 2 - API & Tích hợp JWT
+- **Kiến trúc**: Chuyển đổi sang kiến trúc Lai (Hybrid) - MVC cho Web và REST API cho Mobile/Frontend.
+- **Cấu trúc**:
+  - Tạo `routes/apiRoutes.js` xử lý các endpoint API (prefix `/api`).
+  - Tạo `controllers/apiController.js` xử lý logic và trả về JSON.
+  - Tạo `middleware/apiAuth.js` xử lý xác thực không trạng thái (stateless).
+- **Tính năng**:
+  - Hoàn thiện luồng Đăng nhập qua API.
+  - Tích hợp thư viện `jsonwebtoken`.
+  - Xây dựng cơ chế tạo (signing) và xác thực (verifying) JWT.
+  - Bảo vệ các Route API bằng cơ chế Bearer Token.
+- **Trạng thái**: API Login hoạt động tốt, đã kích hoạt kiểm tra Token.

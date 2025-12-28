@@ -191,3 +191,39 @@ app.use(session({
 1.  **Login:** Gửi Request `POST /api/login` với body JSON (email, pass) -> Nhận về chuỗi `token`.
 2.  **Xác thực:** Copy chuỗi `token` nhận được.
 3.  **Gọi API bảo mật:** Mở tab mới, chọn tab **Headers**, thêm key `Authorization` với giá trị `Bearer <token_vua_copy>` -> Gửi Request để kiểm tra quyền truy cập.
+
+---
+## Giai đoạn 2: Xác thực JWT (Stateless)
+
+### 1. Kiến trúc Hybrid (Lai)
+Dự án hiện tại chạy song song hai cơ chế xác thực:
+- **Web (Browser)**: Sử dụng **Session-based** (Stateful). Server lưu trạng thái trong memory/store, Client dùng Cookie `connect.sid`.
+- **API (Mobile/React)**: Sử dụng **Token-based** (Stateless). Server không lưu trạng thái, Client tự lưu Token.
+
+### 2. Khái niệm JWT (JSON Web Token)
+JWT là chuẩn mở (RFC 7519) dùng để truyền tải thông tin an toàn giữa các bên dưới dạng đối tượng JSON.
+
+#### Cấu trúc
+Gồm 3 phần tách nhau bởi dấu chấm (`.`): `Header.Payload.Signature`
+- **Header**: Loại token (JWT) và thuật toán mã hóa (HS256).
+- **Payload**: Chứa thông tin user (Claims). *Lưu ý: Không để password hay dữ liệu nhạy cảm vào đây.*
+  - Ví dụ: `{ id: "user_123", role: "admin", iat: 1700000000 }`
+- **Signature**: Chữ ký để Server kiểm tra tính toàn vẹn (được tạo từ Header + Payload + Secret Key).
+
+### 3. Cơ chế hoạt động trong Project
+1. **Login**: Client gửi `email/password` -> Server kiểm tra DB -> Nếu đúng, Server ký (sign) một JWT và trả về Client.
+2. **Storage**: Client (Mobile App/Frontend) lưu JWT (thường lưu ở LocalStorage hoặc SecureStore).
+3. **Request**: Với các request cần bảo mật, Client gửi JWT trong Header:
+   `Authorization: Bearer <token_string>`
+4. **Verify**: Middleware `apiAuth.js`:
+   - Lấy token từ Header.
+   - Dùng `jwt.verify(token, process.env.JWT_SECRET)` để kiểm tra.
+   - Nếu hợp lệ: Gán `req.user = decodedData` và cho phép đi tiếp (`next()`).
+   - Nếu không hợp lệ/hết hạn: Trả về 401/403.
+
+### 4. Chi tiết triển khai (Implementation)
+- **Thư viện**: `jsonwebtoken`
+- **Secret Key**: Lưu trong biến môi trường `JWT_SECRET` (file `.env`). Tuyệt đối không hardcode.
+- **Luồng xử lý**:
+  - `apiController.js`: Đăng nhập & Tạo token (`jwt.sign`).
+  - `apiAuth.js`: Middleware chặn bắt request & Xác thực token.
