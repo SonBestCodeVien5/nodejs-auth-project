@@ -16,7 +16,7 @@ exports.verifyToken = (req, res, next) => {
         // kiểm tra token và giải mã bí mật 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // nếu là thật => gắn thông tin người dùng và req
+        // nếu là thật => gắn thông tin giải mã vào req để các middleware sau dùng
         req.user = decoded;
         next();
 

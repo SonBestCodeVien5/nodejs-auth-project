@@ -100,3 +100,19 @@
   - Xây dựng cơ chế tạo (signing) và xác thực (verifying) JWT.
   - Bảo vệ các Route API bằng cơ chế Bearer Token.
 - **Trạng thái**: API Login hoạt động tốt, đã kích hoạt kiểm tra Token.
+
+## 01/01/2026: Triển khai Phase 3 - Bảo mật 2 lớp (2FA/TOTP)
+- **Mục tiêu**: Nâng cấp bảo mật cho API Login bằng phương thức xác thực 2 yếu tố (Password + OTP).
+- **Công nghệ**: `speakeasy` (TOTP Algorithm), `qrcode` (QR Generation).
+- **Thay đổi Database**:
+  - Thêm `twoFactorSecret` (String): Lưu khóa bí mật.
+  - Thêm `twoFactorEnabled` (Boolean): Cờ trạng thái kích hoạt.
+- **Quy trình thực hiện**:
+  - [x] **Setup API**: Tạo endpoint `/api/2fa/setup` để sinh Secret & QR Code.
+  - [x] **Verify API**: Tạo endpoint `/api/2fa/verify` để xác nhận mã OTP lần đầu -> Kích hoạt 2FA.
+  - [x] **Login Logic**: Cập nhật `apiController.login`:
+    - Nếu user chưa bật 2FA -> Cấp Token ngay.
+    - Nếu user đã bật 2FA -> Yêu cầu mã `totp` -> Verify đúng mới cấp Token.
+- **Kết quả**:
+  - Đã test thành công luồng: Login -> Setup -> Verify -> Login lại (bị chặn) -> Login kèm OTP (thành công).
+  - Hệ thống hoạt động ổn định với Google Authenticator.

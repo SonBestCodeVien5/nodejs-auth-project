@@ -1,6 +1,6 @@
 # SỔ TAY KỸ THUẬT DỰ ÁN (TECHNICAL NOTES)
 
-*Cập nhật lần cuối: Tuần 4
+*Cập nhật lần cuối: Tuần 6
 
 Tài liệu này tổng hợp các kiến thức cốt lõi, giải thích bản chất "Tại sao làm thế" cho dự án Node.js/MongoDB Authentication.
 
@@ -120,7 +120,6 @@ app.use(session({
 
   -----
 
----
 ## 6\.. MIDDLEWARE & FLOW XỬ LÝ (NÂNG CAO)
 
 ### 6.1. Cơ chế hoạt động của Middleware
@@ -193,14 +192,16 @@ app.use(session({
 3.  **Gọi API bảo mật:** Mở tab mới, chọn tab **Headers**, thêm key `Authorization` với giá trị `Bearer <token_vua_copy>` -> Gửi Request để kiểm tra quyền truy cập.
 
 ---
-## Giai đoạn 2: Xác thực JWT (Stateless)
+# Giai đoạn 2: 
 
-### 1. Kiến trúc Hybrid (Lai)
+## 1\. Xác thực JWT (Stateless)**
+
+### 1.1. Kiến trúc Hybrid (Lai)
 Dự án hiện tại chạy song song hai cơ chế xác thực:
 - **Web (Browser)**: Sử dụng **Session-based** (Stateful). Server lưu trạng thái trong memory/store, Client dùng Cookie `connect.sid`.
 - **API (Mobile/React)**: Sử dụng **Token-based** (Stateless). Server không lưu trạng thái, Client tự lưu Token.
 
-### 2. Khái niệm JWT (JSON Web Token)
+### 1.2. Khái niệm JWT (JSON Web Token)
 JWT là chuẩn mở (RFC 7519) dùng để truyền tải thông tin an toàn giữa các bên dưới dạng đối tượng JSON.
 
 #### Cấu trúc
@@ -210,7 +211,7 @@ Gồm 3 phần tách nhau bởi dấu chấm (`.`): `Header.Payload.Signature`
   - Ví dụ: `{ id: "user_123", role: "admin", iat: 1700000000 }`
 - **Signature**: Chữ ký để Server kiểm tra tính toàn vẹn (được tạo từ Header + Payload + Secret Key).
 
-### 3. Cơ chế hoạt động trong Project
+### 1.3. Cơ chế hoạt động trong Project
 1. **Login**: Client gửi `email/password` -> Server kiểm tra DB -> Nếu đúng, Server ký (sign) một JWT và trả về Client.
 2. **Storage**: Client (Mobile App/Frontend) lưu JWT (thường lưu ở LocalStorage hoặc SecureStore).
 3. **Request**: Với các request cần bảo mật, Client gửi JWT trong Header:
@@ -221,9 +222,55 @@ Gồm 3 phần tách nhau bởi dấu chấm (`.`): `Header.Payload.Signature`
    - Nếu hợp lệ: Gán `req.user = decodedData` và cho phép đi tiếp (`next()`).
    - Nếu không hợp lệ/hết hạn: Trả về 401/403.
 
-### 4. Chi tiết triển khai (Implementation)
+###  1.4. Chi tiết triển khai (Implementation)
 - **Thư viện**: `jsonwebtoken`
 - **Secret Key**: Lưu trong biến môi trường `JWT_SECRET` (file `.env`). Tuyệt đối không hardcode.
 - **Luồng xử lý**:
   - `apiController.js`: Đăng nhập & Tạo token (`jwt.sign`).
   - `apiAuth.js`: Middleware chặn bắt request & Xác thực token.
+
+  -----
+
+## 2. XÁC THỰC 2 LỚP (2FA - TOTP)
+
+### 2.1. Khái niệm TOTP (Time-based One-Time Password)
+*   **Định nghĩa:** Là phương thức xác thực sử dụng mật khẩu dùng một lần được sinh ra dựa trên thời gian thực.
+*   **Chuẩn:** RFC 6238.
+*   **Công thức toán học:**
+    $$ \text{OTP} = \text{HMAC-SHA1}(\text{SecretKey}, \text{TimeCounter}) $$
+    *   `SecretKey`: Chuỗi ký tự ngẫu nhiên (Base32) được Server sinh ra và chia sẻ cho Client (thông qua mã QR).
+    *   `TimeCounter`: Thời gian hiện tại (Unix Timestamp) chia cho chu kỳ (thường là 30 giây).
+    *   `HMAC-SHA1`: Hàm băm mật mã dùng khóa.
+*   **Đặc điểm nổi bật:**
+    *   **Offline:** Server và Client (Điện thoại) không cần kết nối mạng với nhau. Chúng chỉ cần có chung `SecretKey` và đồng hồ thời gian tương đối chính xác.
+    *   **Dynamic:** Mã thay đổi liên tục mỗi 30 giây, chống lại tấn công phát lại (Replay Attack) sau khi mã hết hạn.
+
+### 2.2. Thư viện sử dụng
+*   **`speakeasy`:** Thư viện Node.js thực hiện các thuật toán TOTP.
+    *   `generateSecret()`: Tạo khóa bí mật ngẫu nhiên.
+    *   `totp.verify()`: Kiểm tra mã OTP gửi lên có khớp với tính toán của Server không.
+*   **`qrcode`:** Thư viện tạo mã QR từ chuỗi URL `otpauth://`. Giúp người dùng quét mã thay vì nhập tay chuỗi Secret dài ngoằng.
+
+### 2.3. Quy trình bảo mật (Security Flow)
+Tại sao không bật 2FA ngay khi tạo Secret?
+*   **Vấn đề (Lockout Risk):** Nếu Server bật cờ `twoFactorEnabled = true` ngay khi sinh mã QR, nhưng người dùng chưa kịp quét (hoặc camera hỏng), lần sau đăng nhập Server sẽ đòi mã OTP mà người dùng không có -> Người dùng bị khóa vĩnh viễn khỏi tài khoản.
+*   **Giải pháp (Verify-First):** Quy trình 2 bước (Setup -> Verify).
+    1.  **Setup:** Server tạo secret, lưu vào DB nhưng **chưa kích hoạt** (`enabled = false`). Gửi QR cho user.
+    2.  **Verify:** Bắt buộc user phải nhập đúng mã 6 số lần đầu tiên để chứng minh họ đã quét thành công và đang nắm giữ mã. Chỉ khi verify thành công, Server mới set `enabled = true`.
+
+### 2.4. Workflow Đăng nhập với 2FA (Login Flow)
+Quy trình đăng nhập thay đổi từ 1 bước sang quy trình có điều kiện:
+
+1.  **Bước 1 (Authentication):** User gửi `Email + Pass`.
+2.  **Bước 2 (Check 2FA Status):** Server kiểm tra trường `twoFactorEnabled` của user.
+    *   **Trường hợp A (Chưa bật):** Cấp Token ngay lập tức.
+    *   **Trường hợp B (Đã bật):**
+        *   Kiểm tra xem request có gửi kèm mã `totp` không.
+        *   Nếu **KHÔNG**: Trả về lỗi `400 Bad Request` kèm thông điệp "Vui lòng nhập mã 2FA" và cờ `require2FA: true`.
+        *   Nếu **CÓ**: Dùng `speakeasy` verify mã `totp` với `twoFactorSecret` trong DB.
+            *   Đúng -> Cấp Token.
+            *   Sai -> Trả về lỗi `400` "Mã không hợp lệ".
+
+### 2.5. Cửa sổ thời gian (Time Window)
+*   Do đồng hồ giữa Server và Điện thoại có thể lệch nhau vài giây, thuật toán TOTP cho phép một "cửa sổ" sai số (Window).
+*   Mặc định `speakeasy` thường cho phép sai lệch ±1 bước (tức là chấp nhận cả mã của 30s trước và 30s sau) để đảm bảo trải nghiệm người dùng mượt mà.

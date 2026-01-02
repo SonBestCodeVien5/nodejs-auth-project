@@ -2,10 +2,12 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const speakeasy = require('speakeasy');
 
 exports.login = async (req, res) => {
     try{
-        const {email, password} = req.body;
+        // Lấy dữ liệu từ req.body
+        const {email, password, totp} = req.body;
 
         const user = await User.findOne({email})
         if(!user){
@@ -17,6 +19,32 @@ exports.login = async (req, res) => {
             return res.status(400).json({message: 'Sai mật khẩu'});
         }
 
+        // logic kiểm tra 2fa
+        if(user.twoFactorEnabled){
+            // nếu đã bật 2FA thì kiểm tra mã TOTP
+            if(!totp){
+                return res.status(400).json({
+                    message: 'Vui lòng nhập mã xác thực 2 lớp (2FA)',
+                    require2FA: true // báo cho client biết là cần mã 2FA
+                });
+            }
+
+            // Kiểm tra mã TOTP nếu 2FA được bật
+            const verified = speakeasy.totp.verify({
+                secret: user.twoFactorSecret,
+                encoding: 'base32',
+                token: totp
+            });
+
+            if(!verified){
+                return res.status(400).json({
+                    message: 'Mã xác thực 2 lớp (2FA) không hợp lệ'
+                });
+            }
+
+        }
+
+        
         // tạo token(jwt) 
         // payload: thông tin gói bên trong token
         const payload = {
@@ -36,7 +64,8 @@ exports.login = async (req, res) => {
             user: {
                 username: user.username,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                twoFactorEnabled: user.twoFactorEnabled
             }
         });
     }

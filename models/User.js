@@ -26,6 +26,14 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'], // Chỉ chấp nhận 1 trong 2 giá trị này
     default: 'user'          // Mặc định là user thường
   },
+  twoFactorSecret: { // Lưu trữ mã bí mật cho xác thực 2 lớp
+    type: String,
+    default: null
+  },
+  twoFactorEnabled: { // Trạng thái bật/tắt xác thực 2 lớp
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now   // Tự động lấy thời gian hiện tại
