@@ -68,18 +68,24 @@ exports.login = async(req, res) => {
             return res.send("Lỗi: Mật khẩu không đúng!");
         }
 
-        // cấp quyền đăng nhập, tạo session, cookie
+        // 4. Kiểm tra 2FA có bật không
+        if (user.twoFactorEnabled) {
+            // Nếu bật 2FA, lưu tạm ID user vào session và chuyển hướng sang trang xác thực 2FA
+            req.session.tempUserId = user._id;
+            console.log("🔒 Yêu cầu xác thực 2FA cho user:", user.username);
+            return res.redirect('/2fa/verify');
+        }
+
+        // 5. Cấp quyền đăng nhập (Nếu không bật 2FA)
         req.session.user = {
-            id: user._id, // tạo session lưu id, username, email, role
+            id: user._id,
             username: user.username,
             email: user.email,
             role: user.role
         };
 
-        // Nếu khớp hết -> Đăng nhập thành công
         console.log("✅ Đăng nhập thành công:", user.username);
 
-        // đăng nhập thành công thì chuyển hướng đến trang tùy theo vai trò
         if(user.role === 'admin'){
             res.redirect('/admin');
         } else {
@@ -145,4 +151,63 @@ exports.getAdminPage = async (req, res) => {
         res.send('Lỗi lấy danh sách User: ' + error.message);
     };
     
+};
+
+// Hàm hiển thị trang xác thực 2FA
+exports.getVerify2FAPage = (req, res) => {
+    // Kiểm tra xem có tempUserId không (tức là đã qua bước login 1)
+    if (!req.session.tempUserId) {
+        return res.redirect('/login');
+    }
+    res.render('verify-2fa', { error: null });
+};
+
+// Hàm xử lý xác thực mã 2FA sau khi login
+exports.verify2FA = async (req, res) => {
+    try {
+        const { totp } = req.body;
+        const tempUserId = req.session.tempUserId;
+
+        if (!tempUserId) {
+            return res.redirect('/login');
+        }
+
+        const user = await User.findById(tempUserId);
+        if (!user) {
+            return res.redirect('/login');
+        }
+
+        const speakeasy = require('speakeasy');
+        const verified = speakeasy.totp.verify({
+            secret: user.twoFactorSecret,
+            encoding: 'base32',
+            token: totp
+        });
+
+        if (verified) {
+            // Xác thực thành công -> Tạo session chính thức
+            req.session.user = {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                role: user.role
+            };
+            // Xóa tempUserId
+            delete req.session.tempUserId;
+
+            console.log("✅ Xác thực 2FA thành công cho user:", user.username);
+
+            if (user.role === 'admin') {
+                res.redirect('/admin');
+            } else {
+                res.redirect('/dashboard');
+            }
+        } else {
+            // Sai mã -> Render lại trang với thông báo lỗi
+            res.render('verify-2fa', { error: 'Mã 2FA không chính xác, vui lòng thử lại.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.send("Lỗi hệ thống: " + error.message);
+    }
 };
